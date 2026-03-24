@@ -10,7 +10,7 @@
       font-family: system-ui, sans-serif;
       background: #f5f5f0;
       color: #1a1a1a;
-      padding: 2rem;
+      padding: 1.5rem;
       max-width: 800px;
       margin: 0 auto;
     }
@@ -24,7 +24,7 @@
     .ctrl { display: flex; flex-direction: column; gap: 6px; }
     .ctrl label { font-size: 13px; color: #666; }
     .ctrl-row { display: flex; align-items: center; gap: 10px; }
-    .ctrl input[type=range] { flex: 1; accent-color: #1D9E75; }
+    .ctrl input[type=range] { flex: 1; accent-color: #378ADD; min-width: 0; }
     .ctrl-val { font-size: 14px; font-weight: 500; min-width: 80px; text-align: right; }
     .metrics {
       display: grid;
@@ -35,16 +35,34 @@
     .metric {
       background: #fff;
       border-radius: 8px;
-      padding: 14px 16px;
+      padding: 12px;
       border: 0.5px solid #ddd;
     }
-    .metric-label { font-size: 12px; color: #888; margin-bottom: 4px; }
-    .metric-value { font-size: 20px; font-weight: 500; }
-    .metric-value.green { color: #1D9E75; }
+    .metric-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+    .metric-value { font-size: 16px; font-weight: 500; word-break: break-word; }
+    .metric-value.green { color: #185FA5; }
     .legend { display: flex; gap: 20px; font-size: 12px; color: #888; margin-bottom: 8px; }
     .legend span { display: flex; align-items: center; gap: 5px; }
-    .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
-    .chart-wrap { position: relative; width: 100%; height: 280px; background: #fff; border-radius: 8px; border: 0.5px solid #ddd; padding: 1rem; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+    .chart-wrap { position: relative; width: 100%; height: 260px; background: #fff; border-radius: 8px; border: 0.5px solid #ddd; padding: 1rem; }
+
+    @media (max-width: 500px) {
+      .controls {
+        grid-template-columns: 1fr;
+      }
+      .metrics {
+        grid-template-columns: 1fr;
+      }
+      .metric {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+      }
+      .metric-label { margin-bottom: 0; }
+      .metric-value { font-size: 18px; }
+      .ctrl-val { min-width: 70px; }
+    }
   </style>
 </head>
 <body>
@@ -97,8 +115,8 @@
   </div>
 
   <div class="legend">
-    <span><span class="legend-dot" style="background:#3B6D11;"></span>Inbetalt kapital</span>
-    <span><span class="legend-dot" style="background:#1D9E75;"></span>Räntevinst</span>
+    <span><span class="legend-dot" style="background:#185FA5;"></span>Inbetalt kapital</span>
+    <span><span class="legend-dot" style="background:#378ADD;"></span>Räntevinst</span>
   </div>
   <div class="chart-wrap">
     <canvas id="chart"></canvas>
@@ -146,9 +164,9 @@
 
       const { labels, invested, total } = calculate(principal, monthly, rate, years);
 
-      const finalVal   = total[total.length - 1];
-      const totalInv   = invested[invested.length - 1];
-      const interest   = finalVal - totalInv;
+      const finalVal     = total[total.length - 1];
+      const totalInv     = invested[invested.length - 1];
+      const interest     = finalVal - totalInv;
       const interestData = total.map((v, i) => v - invested[i]);
 
       document.getElementById('final-value').textContent     = fmt(finalVal);
@@ -166,8 +184,8 @@
           data: {
             labels,
             datasets: [
-              { label: 'Inbetalt kapital', data: invested,      backgroundColor: '#3B6D11', stack: 'a' },
-              { label: 'Räntevinst',       data: interestData,  backgroundColor: '#1D9E75', stack: 'a' }
+              { label: 'Inbetalt kapital', data: invested,     backgroundColor: '#185FA5', stack: 'a' },
+              { label: 'Räntevinst',       data: interestData, backgroundColor: '#378ADD', stack: 'a' }
             ]
           },
           options: {
