@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ränta på ränta</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f5f5f0;
+      color: #1a1a1a;
+      padding: 2rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 22px; font-weight: 500; margin-bottom: 1.5rem; }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 1.5rem;
+    }
+    .ctrl { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl label { font-size: 13px; color: #666; }
+    .ctrl-row { display: flex; align-items: center; gap: 10px; }
+    .ctrl input[type=range] { flex: 1; accent-color: #1D9E75; }
+    .ctrl-val { font-size: 14px; font-weight: 500; min-width: 80px; text-align: right; }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+    .metric {
+      background: #fff;
+      border-radius: 8px;
+      padding: 14px 16px;
+      border: 0.5px solid #ddd;
+    }
+    .metric-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+    .metric-value { font-size: 20px; font-weight: 500; }
+    .metric-value.green { color: #1D9E75; }
+    .legend { display: flex; gap: 20px; font-size: 12px; color: #888; margin-bottom: 8px; }
+    .legend span { display: flex; align-items: center; gap: 5px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+    .chart-wrap { position: relative; width: 100%; height: 280px; background: #fff; border-radius: 8px; border: 0.5px solid #ddd; padding: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Ränta på ränta</h1>
+
+  <div class="controls">
+    <div class="ctrl">
+      <label>Startbelopp</label>
+      <div class="ctrl-row">
+        <input type="range" id="principal" min="1000" max="500000" step="1000" value="10000">
+        <span class="ctrl-val" id="principal-out">10 000 kr</span>
+      </div>
+    </div>
+    <div class="ctrl">
+      <label>Månadsinsättning</label>
+      <div class="ctrl-row">
+        <input type="range" id="monthly" min="0" max="10000" step="100" value="1000">
+        <span class="ctrl-val" id="monthly-out">1 000 kr</span>
+      </div>
+    </div>
+    <div class="ctrl">
+      <label>Årsränta</label>
+      <div class="ctrl-row">
+        <input type="range" id="rate" min="1" max="20" step="0.5" value="7">
+        <span class="ctrl-val" id="rate-out">7%</span>
+      </div>
+    </div>
+    <div class="ctrl">
+      <label>Antal år</label>
+      <div class="ctrl-row">
+        <input type="range" id="years" min="1" max="50" step="1" value="20">
+        <span class="ctrl-val" id="years-out">20 år</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">Slutvärde</div>
+      <div class="metric-value" id="final-value">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Totalt inbetalt</div>
+      <div class="metric-value" id="total-invested">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Räntevinst</div>
+      <div class="metric-value green" id="interest-earned">—</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><span class="legend-dot" style="background:#3B6D11;"></span>Inbetalt kapital</span>
+    <span><span class="legend-dot" style="background:#1D9E75;"></span>Räntevinst</span>
+  </div>
+  <div class="chart-wrap">
+    <canvas id="chart"></canvas>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script>
+    function fmt(n) {
+      return Math.round(n).toLocaleString('sv-SE') + ' kr';
+    }
+
+    function calculate(principal, monthly, rate, years) {
+      const r = rate / 100 / 12;
+      const labels = [];
+      const invested = [];
+      const total = [];
+      for (let y = 0; y <= years; y++) {
+        const months = y * 12;
+        let fv;
+        if (r === 0) {
+          fv = principal + monthly * months;
+        } else {
+          fv = principal * Math.pow(1 + r, months) + monthly * (Math.pow(1 + r, months) - 1) / r;
+        }
+        const inv = principal + monthly * months;
+        labels.push(y === 0 ? 'Start' : 'År ' + y);
+        invested.push(Math.round(inv));
+        total.push(Math.round(fv));
+      }
+      return { labels, invested, total };
+    }
+
+    let chart;
+
+    function update() {
+      const principal = +document.getElementById('principal').value;
+      const monthly   = +document.getElementById('monthly').value;
+      const rate      = +document.getElementById('rate').value;
+      const years     = +document.getElementById('years').value;
+
+      document.getElementById('principal-out').textContent = principal.toLocaleString('sv-SE') + ' kr';
+      document.getElementById('monthly-out').textContent   = monthly.toLocaleString('sv-SE') + ' kr';
+      document.getElementById('rate-out').textContent      = rate.toFixed(1).replace('.', ',') + '%';
+      document.getElementById('years-out').textContent     = years + ' år';
+
+      const { labels, invested, total } = calculate(principal, monthly, rate, years);
+
+      const finalVal   = total[total.length - 1];
+      const totalInv   = invested[invested.length - 1];
+      const interest   = finalVal - totalInv;
+      const interestData = total.map((v, i) => v - invested[i]);
+
+      document.getElementById('final-value').textContent     = fmt(finalVal);
+      document.getElementById('total-invested').textContent  = fmt(totalInv);
+      document.getElementById('interest-earned').textContent = fmt(interest);
+
+      if (chart) {
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = invested;
+        chart.data.datasets[1].data = interestData;
+        chart.update('none');
+      } else {
+        chart = new Chart(document.getElementById('chart'), {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              { label: 'Inbetalt kapital', data: invested,      backgroundColor: '#3B6D11', stack: 'a' },
+              { label: 'Räntevinst',       data: interestData,  backgroundColor: '#1D9E75', stack: 'a' }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: {
+              callbacks: {
+                label: ctx => ' ' + ctx.dataset.label + ': ' + Math.round(ctx.raw).toLocaleString('sv-SE') + ' kr'
+              }
+            }},
+            scales: {
+              x: { stacked: true, ticks: { autoSkip: true, maxTicksLimit: 10, color: '#888' }, grid: { display: false } },
+              y: { stacked: true, ticks: { color: '#888', callback: v => (v/1000) + 'k' }, grid: { color: 'rgba(0,0,0,0.07)' } }
+            }
+          }
+        });
+      }
+    }
+
+    ['principal','monthly','rate','years'].forEach(id => {
+      document.getElementById(id).addEventListener('input', update);
+    });
+
+    update();
+  </script>
+</body>
+</html>
