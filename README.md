@@ -1,2 +1,2 @@
 # Calculator
-Interactive compound interest calculator built with HTML and JavaScript
+Interactive compound interest calculator
